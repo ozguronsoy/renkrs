@@ -1,8 +1,13 @@
 // src/lib.rs
 
+pub trait ColorChannel {}
+
+impl ColorChannel for u8 {}
+impl ColorChannel for f32 {}
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct RGB<T> {
+pub struct RGB<T: ColorChannel> {
     pub r: T,
     pub g: T,
     pub b: T,
@@ -10,7 +15,7 @@ pub struct RGB<T> {
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct RGBA<T> {
+pub struct RGBA<T: ColorChannel> {
     pub r: T,
     pub g: T,
     pub b: T,
