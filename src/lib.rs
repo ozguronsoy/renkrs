@@ -5,6 +5,28 @@ pub trait ColorChannel {}
 impl ColorChannel for u8 {}
 impl ColorChannel for f32 {}
 
+#[derive(Debug, PartialEq)]
+pub enum ParseColorError {
+    /// The string was not exactly 6 characters (ignoring the optional '#')
+    InvalidLength,
+    /// The string contained characters that are not valid hex (0-9, A-F)
+    InvalidFormat,
+}
+
+impl std::error::Error for ParseColorError {}
+impl std::fmt::Display for ParseColorError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParseColorError::InvalidLength => {
+                write!(f, "Hex color string must be 6 or 8 characters long")
+            }
+            ParseColorError::InvalidFormat => {
+                write!(f, "Hex color string contains invalid characters")
+            }
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RGB<T: ColorChannel> {
@@ -102,6 +124,37 @@ impl From<RGB<f32>> for RGBA<u8> {
     }
 }
 
+impl std::str::FromStr for RGB<u8> {
+    type Err = ParseColorError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let hex = s.trim().trim_start_matches('#');
+        if hex.len() == 6 {
+            let r =
+                u8::from_str_radix(&hex[0..2], 16).map_err(|_| ParseColorError::InvalidFormat)?;
+            let g =
+                u8::from_str_radix(&hex[2..4], 16).map_err(|_| ParseColorError::InvalidFormat)?;
+            let b =
+                u8::from_str_radix(&hex[4..6], 16).map_err(|_| ParseColorError::InvalidFormat)?;
+            Ok(Self { r, g, b })
+        } else if hex.len() == 8 {
+            let rgba: RGBA<u8> = hex.parse()?;
+            Ok(rgba.into())
+        } else {
+            return Err(ParseColorError::InvalidLength);
+        }
+    }
+}
+
+impl std::str::FromStr for RGB<f32> {
+    type Err = ParseColorError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let rgb: RGB<u8> = s.parse()?;
+        Ok(rgb.into())
+    }
+}
+
 impl Default for RGBA<u8> {
     fn default() -> Self {
         Self {
@@ -183,6 +236,39 @@ impl From<RGBA<f32>> for RGB<u8> {
             g: (rgba.g * 255.0).round() as u8,
             b: (rgba.b * 255.0).round() as u8,
         }
+    }
+}
+
+impl std::str::FromStr for RGBA<u8> {
+    type Err = ParseColorError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let hex = s.trim().trim_start_matches('#');
+        if hex.len() == 6 {
+            let rgb: RGB<u8> = hex.parse()?;
+            Ok(rgb.into())
+        } else if hex.len() == 8 {
+            let r =
+                u8::from_str_radix(&hex[0..2], 16).map_err(|_| ParseColorError::InvalidFormat)?;
+            let g =
+                u8::from_str_radix(&hex[2..4], 16).map_err(|_| ParseColorError::InvalidFormat)?;
+            let b =
+                u8::from_str_radix(&hex[4..6], 16).map_err(|_| ParseColorError::InvalidFormat)?;
+            let a =
+                u8::from_str_radix(&hex[6..8], 16).map_err(|_| ParseColorError::InvalidFormat)?;
+            Ok(Self { r, g, b, a })
+        } else {
+            Err(ParseColorError::InvalidLength)
+        }
+    }
+}
+
+impl std::str::FromStr for RGBA<f32> {
+    type Err = ParseColorError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let rgba: RGBA<u8> = s.parse()?;
+        Ok(rgba.into())
     }
 }
 
@@ -277,6 +363,33 @@ mod tests {
     }
 
     #[test]
+    fn test_rgb_parse_hex() {
+        let cu8_1: RGB<u8> = "#FF5733".parse().unwrap();
+        assert_eq!(cu8_1.r, 255);
+        assert_eq!(cu8_1.g, 87);
+        assert_eq!(cu8_1.b, 51);
+
+        let cu8_2: RGB<u8> = "00FF00AA".parse().unwrap();
+        assert_eq!(cu8_2.r, 0);
+        assert_eq!(cu8_2.g, 255);
+        assert_eq!(cu8_2.b, 0);
+
+        let cf32_1: RGB<f32> = "#FFFFFF".parse().unwrap();
+        assert_eq!(cf32_1.r, 1.0);
+        assert_eq!(cf32_1.g, 1.0);
+        assert_eq!(cf32_1.b, 1.0);
+
+        assert_eq!(
+            "#FF573".parse::<RGB<u8>>(),
+            Err(ParseColorError::InvalidLength)
+        );
+        assert_eq!(
+            "#XX5733".parse::<RGB<u8>>(),
+            Err(ParseColorError::InvalidFormat)
+        );
+    }
+
+    #[test]
     fn test_rgba_defaults() {
         let cu8 = RGBA::<u8>::default();
         let cf32 = RGBA::<f32>::default();
@@ -364,5 +477,35 @@ mod tests {
         assert_eq!(cu8_2.r, (0.30_f32 * 255.0).round() as u8);
         assert_eq!(cu8_2.g, (0.60_f32 * 255.0).round() as u8);
         assert_eq!(cu8_2.b, (0.90_f32 * 255.0).round() as u8);
+    }
+
+    #[test]
+    fn test_rgba_parse_hex() {
+        let cu8_1: RGBA<u8> = "#FF5733CC".parse().unwrap();
+        assert_eq!(cu8_1.r, 255);
+        assert_eq!(cu8_1.g, 87);
+        assert_eq!(cu8_1.b, 51);
+        assert_eq!(cu8_1.a, 204);
+
+        let cu8_2: RGBA<u8> = "00FF00".parse().unwrap();
+        assert_eq!(cu8_2.r, 0);
+        assert_eq!(cu8_2.g, 255);
+        assert_eq!(cu8_2.b, 0);
+        assert_eq!(cu8_2.a, 255);
+
+        let cf32_1: RGBA<f32> = "#000000FF".parse().unwrap();
+        assert_eq!(cf32_1.r, 0.0);
+        assert_eq!(cf32_1.g, 0.0);
+        assert_eq!(cf32_1.b, 0.0);
+        assert_eq!(cf32_1.a, 1.0);
+
+        assert_eq!(
+            "FF5733C".parse::<RGBA<u8>>(),
+            Err(ParseColorError::InvalidLength)
+        );
+        assert_eq!(
+            "#FF5733XX".parse::<RGBA<f32>>(),
+            Err(ParseColorError::InvalidFormat)
+        );
     }
 }
