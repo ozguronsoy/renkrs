@@ -52,6 +52,14 @@ pub struct HSL {
     pub l: f32,
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HSV {
+    pub h: f32,
+    pub s: f32,
+    pub v: f32,
+}
+
 impl Default for RGB<u8> {
     fn default() -> Self {
         Self { r: 0, g: 0, b: 0 }
@@ -149,6 +157,40 @@ impl From<HSL> for RGB<f32> {
         } else if hsl.h >= 180.0 && hsl.h < 240.0 {
             (0.0, x, c)
         } else if hsl.h >= 240.0 && hsl.h < 300.0 {
+            (x, 0.0, c)
+        } else {
+            (c, 0.0, x)
+        };
+
+        Self {
+            r: r_prime + m,
+            g: g_prime + m,
+            b: b_prime + m,
+        }
+    }
+}
+
+impl From<HSV> for RGB<u8> {
+    fn from(hsv: HSV) -> Self {
+        RGB::<f32>::from(hsv).into()
+    }
+}
+
+impl From<HSV> for RGB<f32> {
+    fn from(hsv: HSV) -> Self {
+        let c = hsv.v * hsv.s;
+        let x = c * (1.0 - ((hsv.h / 60.0) % 2.0 - 1.0).abs());
+        let m = hsv.v - c;
+
+        let (r_prime, g_prime, b_prime) = if hsv.h >= 0.0 && hsv.h < 60.0 {
+            (c, x, 0.0)
+        } else if hsv.h >= 60.0 && hsv.h < 120.0 {
+            (x, c, 0.0)
+        } else if hsv.h >= 120.0 && hsv.h < 180.0 {
+            (0.0, c, x)
+        } else if hsv.h >= 180.0 && hsv.h < 240.0 {
+            (0.0, x, c)
+        } else if hsv.h >= 240.0 && hsv.h < 300.0 {
             (x, 0.0, c)
         } else {
             (c, 0.0, x)
@@ -328,6 +370,18 @@ impl From<HSL> for RGBA<f32> {
     }
 }
 
+impl From<HSV> for RGBA<u8> {
+    fn from(hsv: HSV) -> Self {
+        RGB::<f32>::from(hsv).into()
+    }
+}
+
+impl From<HSV> for RGBA<f32> {
+    fn from(hsv: HSV) -> Self {
+        RGB::<f32>::from(hsv).into()
+    }
+}
+
 impl std::str::FromStr for RGBA<u8> {
     type Err = ParseColorError;
 
@@ -470,6 +524,83 @@ impl From<RGBA<f32>> for HSL {
     }
 }
 
+impl From<HSV> for HSL {
+    fn from(hsv: HSV) -> Self {
+        let l = hsv.v * (1.0 - hsv.s / 2.0);
+        let s = if l == 0.0 || l == 1.0 {
+            0.0
+        } else {
+            (hsv.v - l) / l.min(1.0 - l)
+        };
+        Self { h: hsv.h, s, l }
+    }
+}
+
+impl Default for HSV {
+    fn default() -> Self {
+        Self {
+            h: 0.0,
+            s: 0.0,
+            v: 0.0,
+        }
+    }
+}
+
+impl From<RGB<u8>> for HSV {
+    fn from(rgb: RGB<u8>) -> Self {
+        RGB::<f32>::from(rgb).into()
+    }
+}
+
+impl From<RGB<f32>> for HSV {
+    fn from(rgb: RGB<f32>) -> Self {
+        let max = rgb.r.max(rgb.g).max(rgb.b);
+        let min = rgb.r.min(rgb.g).min(rgb.b);
+        let delta = max - min;
+
+        let v = max;
+        let s = if max == 0.0 { 0.0 } else { delta / max };
+        let mut h = if delta == 0.0 {
+            0.0
+        } else if max == rgb.r {
+            60.0 * (((rgb.g - rgb.b) / delta) % 6.0)
+        } else if max == rgb.g {
+            60.0 * (((rgb.b - rgb.r) / delta) + 2.0)
+        } else {
+            60.0 * (((rgb.r - rgb.g) / delta) + 4.0)
+        };
+
+        if h < 0.0 {
+            h += 360.0;
+        }
+        Self { h, s, v }
+    }
+}
+
+impl From<RGBA<u8>> for HSV {
+    fn from(rgba: RGBA<u8>) -> Self {
+        RGB::<f32>::from(rgba).into()
+    }
+}
+
+impl From<RGBA<f32>> for HSV {
+    fn from(rgba: RGBA<f32>) -> Self {
+        RGB::<f32>::from(rgba).into()
+    }
+}
+
+impl From<HSL> for HSV {
+    fn from(hsl: HSL) -> Self {
+        let v = hsl.l + hsl.s * hsl.l.min(1.0 - hsl.l);
+        let s = if v == 0.0 {
+            0.0
+        } else {
+            2.0 * (1.0 - hsl.l / v)
+        };
+        Self { h: hsl.h, s, v }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -570,15 +701,9 @@ mod tests {
             b: 1.0,
         };
         let hsl_f32: HSL = cf32.into();
-        assert!((hsl_f32.h - 210.0).abs() < epsilon, "RGB<f32> Hue failed");
-        assert!(
-            (hsl_f32.s - 1.0).abs() < epsilon,
-            "RGB<f32> Saturation failed"
-        );
-        assert!(
-            (hsl_f32.l - 0.6).abs() < epsilon,
-            "RGB<f32> Lightness failed"
-        );
+        assert!((hsl_f32.h - 210.0).abs() < epsilon);
+        assert!((hsl_f32.s - 1.0).abs() < epsilon);
+        assert!((hsl_f32.l - 0.6).abs() < epsilon);
 
         let cu8 = RGB::<u8> {
             r: 51,
@@ -586,12 +711,37 @@ mod tests {
             b: 255,
         };
         let hsl_u8: HSL = cu8.into();
-        assert!((hsl_u8.h - 210.0).abs() < epsilon, "RGB<u8> Hue failed");
+        assert!((hsl_u8.h - 210.0).abs() < epsilon);
         assert!(
             (hsl_u8.s - 1.0).abs() < epsilon,
             "RGB<u8> Saturation failed"
         );
-        assert!((hsl_u8.l - 0.6).abs() < epsilon, "RGB<u8> Lightness failed");
+        assert!((hsl_u8.l - 0.6).abs() < epsilon);
+    }
+
+    #[test]
+    fn test_rgb_to_hsv_conversion() {
+        let epsilon = 0.001;
+
+        let cf32 = RGB::<f32> {
+            r: 0.2,
+            g: 0.6,
+            b: 1.0,
+        };
+        let hsv_f32: HSV = cf32.into();
+        assert!((hsv_f32.h - 210.0).abs() < epsilon);
+        assert!((hsv_f32.s - 0.8).abs() < epsilon);
+        assert!((hsv_f32.v - 1.0).abs() < epsilon);
+
+        let cu8 = RGB::<u8> {
+            r: 51,
+            g: 153,
+            b: 255,
+        };
+        let hsv_u8: HSV = cu8.into();
+        assert!((hsv_u8.h - 210.0).abs() < epsilon);
+        assert!((hsv_u8.s - 0.8).abs() < epsilon);
+        assert!((hsv_u8.v - 1.0).abs() < epsilon);
     }
 
     #[test]
@@ -743,15 +893,9 @@ mod tests {
             a: 128,
         };
         let hsl_u8: HSL = cu8.into();
-        assert!((hsl_u8.h - 210.0).abs() < epsilon, "RGBA<u8> Hue failed");
-        assert!(
-            (hsl_u8.s - 1.0).abs() < epsilon,
-            "RGBA<u8> Saturation failed"
-        );
-        assert!(
-            (hsl_u8.l - 0.6).abs() < epsilon,
-            "RGBA<u8> Lightness failed"
-        );
+        assert!((hsl_u8.h - 210.0).abs() < epsilon);
+        assert!((hsl_u8.s - 1.0).abs() < epsilon);
+        assert!((hsl_u8.l - 0.6).abs() < epsilon);
 
         let cf32 = RGBA::<f32> {
             r: 1.0,
@@ -760,15 +904,36 @@ mod tests {
             a: 0.5,
         };
         let hsl_f32: HSL = cf32.into();
-        assert!((hsl_f32.h - 0.0).abs() < epsilon, "RGBA<f32> Hue failed");
-        assert!(
-            (hsl_f32.s - 1.0).abs() < epsilon,
-            "RGBA<f32> Saturation failed"
-        );
-        assert!(
-            (hsl_f32.l - 0.5).abs() < epsilon,
-            "RGBA<f32> Lightness failed"
-        );
+        assert!((hsl_f32.h - 0.0).abs() < epsilon);
+        assert!((hsl_f32.s - 1.0).abs() < epsilon);
+        assert!((hsl_f32.l - 0.5).abs() < epsilon);
+    }
+
+    #[test]
+    fn test_rgba_to_hsv_conversion() {
+        let epsilon = 0.001;
+
+        let cf32 = RGBA::<f32> {
+            r: 0.2,
+            g: 0.6,
+            b: 1.0,
+            a: 0.35,
+        };
+        let hsv_f32: HSV = cf32.into();
+        assert!((hsv_f32.h - 210.0).abs() < epsilon);
+        assert!((hsv_f32.s - 0.8).abs() < epsilon);
+        assert!((hsv_f32.v - 1.0).abs() < epsilon);
+
+        let cu8 = RGBA::<u8> {
+            r: 51,
+            g: 153,
+            b: 255,
+            a: 172,
+        };
+        let hsv_u8: HSV = cu8.into();
+        assert!((hsv_u8.h - 210.0).abs() < epsilon);
+        assert!((hsv_u8.s - 0.8).abs() < epsilon);
+        assert!((hsv_u8.v - 1.0).abs() < epsilon);
     }
 
     #[test]
@@ -885,5 +1050,79 @@ mod tests {
         assert_eq!(rgb_blue_u8.g, 69);
         assert_eq!(rgb_blue_u8.b, 192);
         assert_eq!(rgb_blue_u8.a, 255);
+    }
+
+    #[test]
+    fn test_hsl_to_hsv_conversion() {
+        let epsilon = 0.001;
+
+        let hsl = HSL {
+            h: 210.0,
+            s: 1.0,
+            l: 0.6,
+        };
+        let hsv: HSV = hsl.into();
+        assert!((hsv.h - 210.0).abs() < epsilon);
+        assert!((hsv.s - 0.8).abs() < epsilon);
+        assert!((hsv.v - 1.0).abs() < epsilon);
+    }
+
+    #[test]
+    fn test_hsv_to_rgb_conversion() {
+        let epsilon = 0.001;
+
+        let hsv = HSV {
+            h: 210.0,
+            s: 0.8,
+            v: 1.0,
+        };
+
+        let cf32: RGB<f32> = hsv.into();
+        assert!((cf32.r - 0.2).abs() < epsilon);
+        assert!((cf32.g - 0.6).abs() < epsilon);
+        assert!((cf32.b - 1.0).abs() < epsilon);
+
+        let cu8: RGB<u8> = hsv.into();
+        assert_eq!(cu8.r, 51);
+        assert_eq!(cu8.g, 153);
+        assert_eq!(cu8.b, 255);
+    }
+
+    #[test]
+    fn test_hsv_to_rgba_conversion() {
+        let epsilon = 0.001;
+
+        let hsv = HSV {
+            h: 210.0,
+            s: 0.8,
+            v: 1.0,
+        };
+
+        let cf32: RGBA<f32> = hsv.into();
+        assert!((cf32.r - 0.2).abs() < epsilon);
+        assert!((cf32.g - 0.6).abs() < epsilon);
+        assert!((cf32.b - 1.0).abs() < epsilon);
+        assert_eq!(cf32.a, 1.0);
+
+        let cu8: RGBA<u8> = hsv.into();
+        assert_eq!(cu8.r, 51);
+        assert_eq!(cu8.g, 153);
+        assert_eq!(cu8.b, 255);
+        assert_eq!(cu8.a, 255);
+    }
+
+    #[test]
+    fn test_hsv_to_hsl_conversion() {
+        let epsilon = 0.001;
+
+        let hsv = HSV {
+            h: 45.0,
+            s: 0.75,
+            v: 0.8,
+        };
+        let hsl: HSL = hsv.into();
+        assert!((hsl.h - 45.0).abs() < epsilon);
+        assert!((hsl.s - 0.6).abs() < epsilon);
+        assert!((hsl.l - 0.5).abs() < epsilon);
     }
 }
