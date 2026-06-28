@@ -6,9 +6,15 @@
 //!
 //! ## Example
 //! ```rust
-//! use renkrs::{RGB, HSL};
-//! let color: RGB<u8> = "#A32B86".parse().unwrap();
-//! let hsl: HSL = color.into();
+//! use renkrs::{RGB, RGBA, HSL, HSV, CMYK};
+//! 
+//! let color_u8: RGBA<u8> = "#FF5733".parse().unwrap();
+//! let color_f32: RGB<f32> = color_u8.into();
+//! let hsl: HSL = color_u8.into();
+//! let hsv: HSV = color_f32.into();
+//! let cmyk: CMYK = hsv.into();
+//! let hex_lower: String = format!("{:#x}", color_u8);
+//! let hex_upper: String = format!("{:#X}", color_f32);
 //! ```
 
 /// A marker trait used to restrict color channels to valid types.
