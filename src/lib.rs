@@ -7,7 +7,7 @@
 //! ## Example
 //! ```rust
 //! use renkrs::{RGB, RGBA, HSL, HSV, CMYK};
-//! 
+//!
 //! let color_u8: RGBA<u8> = "#FF5733".parse().unwrap();
 //! let color_f32: RGB<f32> = color_u8.into();
 //! let hsl: HSL = color_u8.into();
@@ -298,7 +298,7 @@ impl std::str::FromStr for RGB<u8> {
             let rgba: RGBA<u8> = hex.parse()?;
             Ok(rgba.into())
         } else {
-            return Err(ParseColorError::InvalidLength);
+            Err(ParseColorError::InvalidLength)
         }
     }
 }
