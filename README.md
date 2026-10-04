@@ -8,7 +8,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-renkrs = "0.1.0"
+renkrs = "0.1.1"
 ```
 
 or run the following command:
