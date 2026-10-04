@@ -121,6 +121,12 @@ pub struct CMYK {
     pub k: f32,
 }
 
+impl<T: ColorChannel> RGB<T> {
+    pub fn new(r: T, g: T, b: T) -> Self {
+        Self { r, g, b }
+    }
+}
+
 impl Default for RGB<u8> {
     fn default() -> Self {
         Self { r: 0, g: 0, b: 0 }
@@ -347,6 +353,12 @@ impl std::fmt::UpperHex for RGB<f32> {
     }
 }
 
+impl<T: ColorChannel> RGBA<T> {
+    pub fn new(r: T, g: T, b: T, a: T) -> Self {
+        Self { r, g, b, a }
+    }
+}
+
 impl Default for RGBA<u8> {
     fn default() -> Self {
         Self {
@@ -555,6 +567,12 @@ impl std::fmt::UpperHex for RGBA<f32> {
     }
 }
 
+impl HSL {
+    pub fn new(h: f32, s: f32, l: f32) -> Self {
+        Self { h, s, l }
+    }
+}
+
 impl Default for HSL {
     fn default() -> Self {
         Self {
@@ -631,6 +649,12 @@ impl From<CMYK> for HSL {
     }
 }
 
+impl HSV {
+    pub fn new(h: f32, s: f32, v: f32) -> Self {
+        Self { h, s, v }
+    }
+}
+
 impl Default for HSV {
     fn default() -> Self {
         Self {
@@ -699,6 +723,12 @@ impl From<HSL> for HSV {
 impl From<CMYK> for HSV {
     fn from(cmyk: CMYK) -> Self {
         RGB::<f32>::from(cmyk).into()
+    }
+}
+
+impl CMYK {
+    pub fn new(c: f32, m: f32, y: f32, k: f32) -> Self {
+        Self { c, m, y, k }
     }
 }
 
@@ -782,21 +812,13 @@ mod tests {
 
     #[test]
     fn test_rgb_generic_conversion() {
-        let cu8_1 = RGB::<u8> {
-            r: 18,
-            g: 86,
-            b: 205,
-        };
+        let cu8_1 = RGB::<u8>::new(18, 86, 205);
         let cf32_1: RGB<f32> = cu8_1.into();
         assert_eq!(cf32_1.r, 18.0 / 255.0);
         assert_eq!(cf32_1.g, 86.0 / 255.0);
         assert_eq!(cf32_1.b, 205.0 / 255.0);
 
-        let cf32_2 = RGB::<f32> {
-            r: 0.10,
-            g: 0.25,
-            b: 0.40,
-        };
+        let cf32_2 = RGB::<f32>::new(0.10, 0.25, 0.40);
         let cu8_2: RGB<u8> = cf32_2.into();
         assert_eq!(cu8_2.r, (0.10_f32 * 255.0).round() as u8);
         assert_eq!(cu8_2.g, (0.25_f32 * 255.0).round() as u8);
@@ -805,22 +827,14 @@ mod tests {
 
     #[test]
     fn test_rgb_to_rgba_conversion() {
-        let cu8_1 = RGB::<u8> {
-            r: 37,
-            g: 56,
-            b: 152,
-        };
+        let cu8_1 = RGB::<u8>::new(37, 56, 152);
         let cu8_2: RGBA<u8> = cu8_1.into();
         assert_eq!(cu8_1.r, cu8_2.r);
         assert_eq!(cu8_1.g, cu8_2.g);
         assert_eq!(cu8_1.b, cu8_2.b);
         assert_eq!(cu8_2.a, 255);
 
-        let cf32_1 = RGB::<f32> {
-            r: 0.65,
-            g: 0.11,
-            b: 0.28,
-        };
+        let cf32_1 = RGB::<f32>::new(0.65, 0.11, 0.28);
         let cf32_2: RGBA<f32> = cf32_1.into();
         assert_eq!(cf32_1.r, cf32_2.r);
         assert_eq!(cf32_1.g, cf32_2.g);
@@ -831,22 +845,14 @@ mod tests {
     #[test]
     fn test_rgb_to_rgba_generic_conversion() {
         // RGB<u8> -> RGBA<f32>
-        let cu8_1 = RGB::<u8> {
-            r: 100,
-            g: 150,
-            b: 200,
-        };
+        let cu8_1 = RGB::<u8>::new(100, 150, 200);
         let cf32_1: RGBA<f32> = cu8_1.into();
         assert_eq!(cf32_1.r, 100.0 / 255.0);
         assert_eq!(cf32_1.g, 150.0 / 255.0);
         assert_eq!(cf32_1.b, 200.0 / 255.0);
         assert_eq!(cf32_1.a, 1.0);
 
-        let cf32_2 = RGB::<f32> {
-            r: 0.20,
-            g: 0.50,
-            b: 0.80,
-        };
+        let cf32_2 = RGB::<f32>::new(0.20, 0.50, 0.80);
         let cu8_2: RGBA<u8> = cf32_2.into();
         assert_eq!(cu8_2.r, (0.20_f32 * 255.0).round() as u8);
         assert_eq!(cu8_2.g, (0.50_f32 * 255.0).round() as u8);
@@ -858,21 +864,13 @@ mod tests {
     fn test_rgb_to_hsl_conversion() {
         let epsilon = 0.001;
 
-        let cf32 = RGB::<f32> {
-            r: 0.2,
-            g: 0.6,
-            b: 1.0,
-        };
+        let cf32 = RGB::<f32>::new(0.2, 0.6, 1.0);
         let hsl_f32: HSL = cf32.into();
         assert!((hsl_f32.h - 210.0).abs() < epsilon);
         assert!((hsl_f32.s - 1.0).abs() < epsilon);
         assert!((hsl_f32.l - 0.6).abs() < epsilon);
 
-        let cu8 = RGB::<u8> {
-            r: 51,
-            g: 153,
-            b: 255,
-        };
+        let cu8 = RGB::<u8>::new(51, 153, 255);
         let hsl_u8: HSL = cu8.into();
         assert!((hsl_u8.h - 210.0).abs() < epsilon);
         assert!(
@@ -886,21 +884,13 @@ mod tests {
     fn test_rgb_to_hsv_conversion() {
         let epsilon = 0.001;
 
-        let cf32 = RGB::<f32> {
-            r: 0.2,
-            g: 0.6,
-            b: 1.0,
-        };
+        let cf32 = RGB::<f32>::new(0.2, 0.6, 1.0);
         let hsv_f32: HSV = cf32.into();
         assert!((hsv_f32.h - 210.0).abs() < epsilon);
         assert!((hsv_f32.s - 0.8).abs() < epsilon);
         assert!((hsv_f32.v - 1.0).abs() < epsilon);
 
-        let cu8 = RGB::<u8> {
-            r: 51,
-            g: 153,
-            b: 255,
-        };
+        let cu8 = RGB::<u8>::new(51, 153, 255);
         let hsv_u8: HSV = cu8.into();
         assert!((hsv_u8.h - 210.0).abs() < epsilon);
         assert!((hsv_u8.s - 0.8).abs() < epsilon);
@@ -911,33 +901,21 @@ mod tests {
     fn test_rgb_to_cmyk_conversion() {
         let epsilon = 0.001;
 
-        let rgb_red = RGB::<f32> {
-            r: 1.0,
-            g: 0.0,
-            b: 0.0,
-        };
+        let rgb_red = RGB::<f32>::new(1.0, 0.0, 0.0);
         let cmyk_red: CMYK = rgb_red.into();
         assert!((cmyk_red.c - 0.0).abs() < epsilon);
         assert!((cmyk_red.m - 1.0).abs() < epsilon);
         assert!((cmyk_red.y - 1.0).abs() < epsilon);
         assert!((cmyk_red.k - 0.0).abs() < epsilon);
 
-        let rgb_black = RGB::<f32> {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        };
+        let rgb_black = RGB::<f32>::default();
         let cmyk_black: CMYK = rgb_black.into();
         assert!((cmyk_black.c - 0.0).abs() < epsilon);
         assert!((cmyk_black.m - 0.0).abs() < epsilon);
         assert!((cmyk_black.y - 0.0).abs() < epsilon);
         assert!((cmyk_black.k - 1.0).abs() < epsilon);
 
-        let rgb_purple = RGB::<u8> {
-            r: 102,
-            g: 51,
-            b: 153,
-        };
+        let rgb_purple = RGB::<u8>::new(102, 51, 153);
         let cmyk_purple: CMYK = rgb_purple.into();
         assert!((cmyk_purple.c - 0.333).abs() < epsilon);
         assert!((cmyk_purple.m - 0.666).abs() < epsilon);
@@ -974,21 +952,13 @@ mod tests {
 
     #[test]
     fn test_rgb_to_hex() {
-        let cu8 = RGB::<u8> {
-            r: 255,
-            g: 87,
-            b: 51,
-        };
+        let cu8 = RGB::<u8>::new(255, 87, 51);
         assert_eq!(format!("{:X}", cu8), "FF5733");
         assert_eq!(format!("{:x}", cu8), "ff5733");
         assert_eq!(format!("{:#X}", cu8), "#FF5733");
         assert_eq!(format!("{:#x}", cu8), "#ff5733");
 
-        let cf32 = RGB::<f32> {
-            r: 1.0,
-            g: 0.0,
-            b: 1.0,
-        };
+        let cf32 = RGB::<f32>::new(1.0, 0.0, 1.0);
         assert_eq!(format!("{:X}", cf32), "FF00FF");
         assert_eq!(format!("{:#x}", cf32), "#ff00ff");
     }
@@ -1008,24 +978,14 @@ mod tests {
 
     #[test]
     fn test_rgba_generic_conversion() {
-        let cu8_1 = RGBA::<u8> {
-            r: 18,
-            g: 86,
-            b: 205,
-            a: 163,
-        };
+        let cu8_1 = RGBA::<u8>::new(18, 86, 205, 163);
         let cf32_1: RGBA<f32> = cu8_1.into();
         assert_eq!(cf32_1.r, 18.0 / 255.0);
         assert_eq!(cf32_1.g, 86.0 / 255.0);
         assert_eq!(cf32_1.b, 205.0 / 255.0);
         assert_eq!(cf32_1.a, 163.0 / 255.0);
 
-        let cf32_2 = RGBA::<f32> {
-            r: 0.10,
-            g: 0.25,
-            b: 0.40,
-            a: 0.86,
-        };
+        let cf32_2 = RGBA::<f32>::new(0.10, 0.25, 0.40, 0.86);
         let cu8_2: RGBA<u8> = cf32_2.into();
         assert_eq!(cu8_2.r, (0.10_f32 * 255.0).round() as u8);
         assert_eq!(cu8_2.g, (0.25_f32 * 255.0).round() as u8);
@@ -1035,23 +995,13 @@ mod tests {
 
     #[test]
     fn test_rgba_to_rgb_conversion() {
-        let cu8_1 = RGBA::<u8> {
-            r: 37,
-            g: 56,
-            b: 152,
-            a: 213,
-        };
+        let cu8_1 = RGBA::<u8>::new(37, 56, 152, 213);
         let cu8_2: RGB<u8> = cu8_1.into();
         assert_eq!(cu8_1.r, cu8_2.r);
         assert_eq!(cu8_1.g, cu8_2.g);
         assert_eq!(cu8_1.b, cu8_2.b);
 
-        let cf32_1 = RGBA::<f32> {
-            r: 0.65,
-            g: 0.11,
-            b: 0.28,
-            a: 0.35,
-        };
+        let cf32_1 = RGBA::<f32>::new(0.65, 0.11, 0.28, 0.35);
         let cf32_2: RGB<f32> = cf32_1.into();
         assert_eq!(cf32_1.r, cf32_2.r);
         assert_eq!(cf32_1.g, cf32_2.g);
@@ -1060,23 +1010,13 @@ mod tests {
 
     #[test]
     fn test_rgba_to_rgb_generic_conversion() {
-        let cu8_1 = RGBA::<u8> {
-            r: 50,
-            g: 100,
-            b: 150,
-            a: 200,
-        };
+        let cu8_1 = RGBA::<u8>::new(50, 100, 150, 200);
         let cf32_1: RGB<f32> = cu8_1.into();
         assert_eq!(cf32_1.r, 50.0 / 255.0);
         assert_eq!(cf32_1.g, 100.0 / 255.0);
         assert_eq!(cf32_1.b, 150.0 / 255.0);
 
-        let cf32_2 = RGBA::<f32> {
-            r: 0.30,
-            g: 0.60,
-            b: 0.90,
-            a: 0.50,
-        };
+        let cf32_2 = RGBA::<f32>::new(0.30, 0.60, 0.90, 0.50);
         let cu8_2: RGB<u8> = cf32_2.into();
         assert_eq!(cu8_2.r, (0.30_f32 * 255.0).round() as u8);
         assert_eq!(cu8_2.g, (0.60_f32 * 255.0).round() as u8);
@@ -1087,23 +1027,13 @@ mod tests {
     fn test_rgba_to_hsl_conversion() {
         let epsilon = 0.001;
 
-        let cu8 = RGBA::<u8> {
-            r: 51,
-            g: 153,
-            b: 255,
-            a: 128,
-        };
+        let cu8 = RGBA::<u8>::new(51, 153, 255, 128);
         let hsl_u8: HSL = cu8.into();
         assert!((hsl_u8.h - 210.0).abs() < epsilon);
         assert!((hsl_u8.s - 1.0).abs() < epsilon);
         assert!((hsl_u8.l - 0.6).abs() < epsilon);
 
-        let cf32 = RGBA::<f32> {
-            r: 1.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.5,
-        };
+        let cf32 = RGBA::<f32>::new(1.0, 0.0, 0.0, 0.5);
         let hsl_f32: HSL = cf32.into();
         assert!((hsl_f32.h - 0.0).abs() < epsilon);
         assert!((hsl_f32.s - 1.0).abs() < epsilon);
@@ -1114,23 +1044,13 @@ mod tests {
     fn test_rgba_to_hsv_conversion() {
         let epsilon = 0.001;
 
-        let cf32 = RGBA::<f32> {
-            r: 0.2,
-            g: 0.6,
-            b: 1.0,
-            a: 0.35,
-        };
+        let cf32 = RGBA::<f32>::new(0.2, 0.6, 1.0, 0.35);
         let hsv_f32: HSV = cf32.into();
         assert!((hsv_f32.h - 210.0).abs() < epsilon);
         assert!((hsv_f32.s - 0.8).abs() < epsilon);
         assert!((hsv_f32.v - 1.0).abs() < epsilon);
 
-        let cu8 = RGBA::<u8> {
-            r: 51,
-            g: 153,
-            b: 255,
-            a: 172,
-        };
+        let cu8 = RGBA::<u8>::new(51, 153, 255, 172);
         let hsv_u8: HSV = cu8.into();
         assert!((hsv_u8.h - 210.0).abs() < epsilon);
         assert!((hsv_u8.s - 0.8).abs() < epsilon);
@@ -1141,36 +1061,21 @@ mod tests {
     fn test_rgba_to_cmyk_conversion() {
         let epsilon = 0.001;
 
-        let rgba_red = RGBA::<f32> {
-            r: 1.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.3,
-        };
+        let rgba_red = RGBA::<f32>::new(1.0, 0.0, 0.0, 0.3);
         let cmyk_red: CMYK = rgba_red.into();
         assert!((cmyk_red.c - 0.0).abs() < epsilon);
         assert!((cmyk_red.m - 1.0).abs() < epsilon);
         assert!((cmyk_red.y - 1.0).abs() < epsilon);
         assert!((cmyk_red.k - 0.0).abs() < epsilon);
 
-        let rgba_black = RGBA::<f32> {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 0.7,
-        };
+        let rgba_black = RGBA::<f32>::new(0.0, 0.0, 0.0, 0.7);
         let cmyk_black: CMYK = rgba_black.into();
         assert!((cmyk_black.c - 0.0).abs() < epsilon);
         assert!((cmyk_black.m - 0.0).abs() < epsilon);
         assert!((cmyk_black.y - 0.0).abs() < epsilon);
         assert!((cmyk_black.k - 1.0).abs() < epsilon);
 
-        let rgba_purple = RGBA::<u8> {
-            r: 102,
-            g: 51,
-            b: 153,
-            a: 217,
-        };
+        let rgba_purple = RGBA::<u8>::new(102, 51, 153, 217);
         let cmyk_purple: CMYK = rgba_purple.into();
         assert!((cmyk_purple.c - 0.333).abs() < epsilon);
         assert!((cmyk_purple.m - 0.666).abs() < epsilon);
@@ -1210,23 +1115,13 @@ mod tests {
 
     #[test]
     fn test_rgba_to_hex() {
-        let cu8 = RGBA::<u8> {
-            r: 0,
-            g: 255,
-            b: 0,
-            a: 170,
-        };
+        let cu8 = RGBA::<u8>::new(0, 255, 0, 170);
         assert_eq!(format!("{:X}", cu8), "00FF00AA");
         assert_eq!(format!("{:x}", cu8), "00ff00aa");
         assert_eq!(format!("{:#X}", cu8), "#00FF00AA");
         assert_eq!(format!("{:#x}", cu8), "#00ff00aa");
 
-        let cf32 = RGBA::<f32> {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 1.0,
-        };
+        let cf32 = RGBA::<f32>::new(0.0, 0.0, 0.0, 1.0);
         assert_eq!(format!("{:X}", cf32), "000000FF");
         assert_eq!(format!("{:#x}", cf32), "#000000ff");
     }
@@ -1235,21 +1130,13 @@ mod tests {
     fn test_hsl_to_rgb_conversion() {
         let epsilon = 0.001;
 
-        let hsl_red = HSL {
-            h: 0.0,
-            s: 1.0,
-            l: 0.5,
-        };
+        let hsl_red = HSL::new(0.0, 1.0, 0.5);
         let rgb_red_f32: RGB<f32> = hsl_red.into();
         assert!((rgb_red_f32.r - 1.0).abs() < epsilon);
         assert!((rgb_red_f32.g - 0.0).abs() < epsilon);
         assert!((rgb_red_f32.b - 0.0).abs() < epsilon);
 
-        let hsl_blue = HSL {
-            h: 235.0,
-            s: 0.54,
-            l: 0.49,
-        };
+        let hsl_blue = HSL::new(235.0, 0.54, 0.49);
         let rgb_blue_f32: RGB<f32> = hsl_blue.into();
         assert!((rgb_blue_f32.r - 0.2254).abs() < epsilon);
         assert!((rgb_blue_f32.g - 0.2695).abs() < epsilon);
@@ -1265,22 +1152,14 @@ mod tests {
     fn test_hsl_to_rgba_conversion() {
         let epsilon = 0.001;
 
-        let hsl_red = HSL {
-            h: 0.0,
-            s: 1.0,
-            l: 0.5,
-        };
+        let hsl_red = HSL::new(0.0, 1.0, 0.5);
         let rgb_red_f32: RGBA<f32> = hsl_red.into();
         assert!((rgb_red_f32.r - 1.0).abs() < epsilon);
         assert!((rgb_red_f32.g - 0.0).abs() < epsilon);
         assert!((rgb_red_f32.b - 0.0).abs() < epsilon);
         assert_eq!(rgb_red_f32.a, 1.0);
 
-        let hsl_blue = HSL {
-            h: 235.0,
-            s: 0.54,
-            l: 0.49,
-        };
+        let hsl_blue = HSL::new(235.0, 0.54, 0.49);
         let rgb_blue_f32: RGBA<f32> = hsl_blue.into();
         assert!((rgb_blue_f32.r - 0.2254).abs() < epsilon);
         assert!((rgb_blue_f32.g - 0.2695).abs() < epsilon);
@@ -1298,11 +1177,7 @@ mod tests {
     fn test_hsl_to_hsv_conversion() {
         let epsilon = 0.001;
 
-        let hsl = HSL {
-            h: 210.0,
-            s: 1.0,
-            l: 0.6,
-        };
+        let hsl = HSL::new(210.0, 1.0, 0.6);
         let hsv: HSV = hsl.into();
         assert!((hsv.h - 210.0).abs() < epsilon);
         assert!((hsv.s - 0.8).abs() < epsilon);
@@ -1313,11 +1188,7 @@ mod tests {
     fn test_hsl_cmyk_cross_conversion() {
         let epsilon = 0.002;
 
-        let hsl_purple = HSL {
-            h: 270.0,
-            s: 0.5,
-            l: 0.4,
-        };
+        let hsl_purple = HSL::new(270.0, 0.5, 0.4);
         let cmyk: CMYK = hsl_purple.into();
         assert!((cmyk.c - 0.333).abs() < epsilon);
         assert!((cmyk.m - 0.667).abs() < epsilon);
@@ -1329,11 +1200,7 @@ mod tests {
     fn test_hsv_to_rgb_conversion() {
         let epsilon = 0.001;
 
-        let hsv = HSV {
-            h: 210.0,
-            s: 0.8,
-            v: 1.0,
-        };
+        let hsv = HSV::new(210.0, 0.8, 1.0);
 
         let cf32: RGB<f32> = hsv.into();
         assert!((cf32.r - 0.2).abs() < epsilon);
@@ -1350,11 +1217,7 @@ mod tests {
     fn test_hsv_to_rgba_conversion() {
         let epsilon = 0.001;
 
-        let hsv = HSV {
-            h: 210.0,
-            s: 0.8,
-            v: 1.0,
-        };
+        let hsv = HSV::new(210.0, 0.8, 1.0);
 
         let cf32: RGBA<f32> = hsv.into();
         assert!((cf32.r - 0.2).abs() < epsilon);
@@ -1373,11 +1236,7 @@ mod tests {
     fn test_hsv_to_hsl_conversion() {
         let epsilon = 0.001;
 
-        let hsv = HSV {
-            h: 45.0,
-            s: 0.75,
-            v: 0.8,
-        };
+        let hsv = HSV::new(45.0, 0.75, 0.8);
         let hsl: HSL = hsv.into();
         assert!((hsl.h - 45.0).abs() < epsilon);
         assert!((hsl.s - 0.6).abs() < epsilon);
@@ -1388,11 +1247,7 @@ mod tests {
     fn test_hsv_to_cmyk_conversion() {
         let epsilon = 0.002;
 
-        let hsv_purple = HSV {
-            h: 270.0,
-            s: 0.666,
-            v: 0.6,
-        };
+        let hsv_purple = HSV::new(270.0, 0.666, 0.6);
         let cmyk: CMYK = hsv_purple.into();
         assert!((cmyk.c - 0.333).abs() < epsilon);
         assert!((cmyk.m - 0.667).abs() < epsilon);
@@ -1404,23 +1259,13 @@ mod tests {
     fn test_cmyk_to_rgb_conversion() {
         let epsilon = 0.001;
 
-        let cmyk_cyan = CMYK {
-            c: 1.0,
-            m: 0.0,
-            y: 0.0,
-            k: 0.0,
-        };
+        let cmyk_cyan = CMYK::new(1.0, 0.0, 0.0, 0.0);
         let rgb_cyan: RGB<f32> = cmyk_cyan.into();
         assert!((rgb_cyan.r - 0.0).abs() < epsilon);
         assert!((rgb_cyan.g - 1.0).abs() < epsilon);
         assert!((rgb_cyan.b - 1.0).abs() < epsilon);
 
-        let cmyk_mixed = CMYK {
-            c: 0.5,
-            m: 0.25,
-            y: 0.0,
-            k: 0.2,
-        };
+        let cmyk_mixed = CMYK::new(0.5, 0.25, 0.0, 0.2);
         let rgb_u8: RGB<u8> = cmyk_mixed.into();
         assert_eq!(rgb_u8.r, 102);
         assert_eq!(rgb_u8.g, 153);
@@ -1431,23 +1276,13 @@ mod tests {
     fn test_cmyk_to_rgba_conversion() {
         let epsilon = 0.001;
 
-        let cmyk_cyan = CMYK {
-            c: 1.0,
-            m: 0.0,
-            y: 0.0,
-            k: 0.0,
-        };
+        let cmyk_cyan = CMYK::new(1.0, 0.0, 0.0, 0.0);
         let rgba_cyan: RGBA<f32> = cmyk_cyan.into();
         assert!((rgba_cyan.r - 0.0).abs() < epsilon);
         assert!((rgba_cyan.g - 1.0).abs() < epsilon);
         assert!((rgba_cyan.b - 1.0).abs() < epsilon);
 
-        let cmyk_mixed = CMYK {
-            c: 0.5,
-            m: 0.25,
-            y: 0.0,
-            k: 0.2,
-        };
+        let cmyk_mixed = CMYK::new(0.5, 0.25, 0.0, 0.2);
         let rgba_u8: RGBA<u8> = cmyk_mixed.into();
         assert_eq!(rgba_u8.r, 102);
         assert_eq!(rgba_u8.g, 153);
@@ -1459,12 +1294,7 @@ mod tests {
     fn test_cmyk_to_hsl_conversion() {
         let epsilon = 0.002;
 
-        let cmyk_purple = CMYK {
-            c: 1.0 / 3.0,
-            m: 2.0 / 3.0,
-            y: 0.0,
-            k: 0.4,
-        };
+        let cmyk_purple = CMYK::new(1.0 / 3.0, 2.0 / 3.0, 0.0, 0.4);
         let hsl: HSL = cmyk_purple.into();
         assert!((hsl.h - 270.0).abs() < epsilon);
         assert!((hsl.s - 0.5).abs() < epsilon);
@@ -1475,12 +1305,7 @@ mod tests {
     fn test_cmyk_to_hsv_conversion() {
         let epsilon = 0.002;
 
-        let cmyk_purple = CMYK {
-            c: 1.0 / 3.0,
-            m: 2.0 / 3.0,
-            y: 0.0,
-            k: 0.4,
-        };
+        let cmyk_purple = CMYK::new(1.0 / 3.0, 2.0 / 3.0, 0.0, 0.4);
         let hsv: HSV = cmyk_purple.into();
         assert!((hsv.h - 270.0).abs() < epsilon);
         assert!((hsv.s - 0.666).abs() < epsilon, "HSV Saturation failed");
