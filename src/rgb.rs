@@ -1,7 +1,6 @@
-use crate::{Cmyk, ColorChannel, Hsl, Hsv, ParseColorError, Rgba};
+use crate::{Cmyk, Color, ColorChannel, Hsl, Hsv, ParseColorError, Rgba};
 
 /// Stores color information as red, green, and blue.
-#[allow(clippy::upper_case_acronyms)]
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rgb<T: ColorChannel> {
@@ -32,6 +31,14 @@ impl Default for Rgb<f32> {
             g: 0.0,
             b: 0.0,
         }
+    }
+}
+
+impl<T: ColorChannel> Color<T> for Rgb<T> {
+    fn as_slice(&self) -> &[T] {
+        // SAFETY: `Rgb` is `#[repr(C)]` and consists of exactly three fields of type `T`,
+        // so it has the same layout as `[T; 3]`.
+        unsafe { std::slice::from_raw_parts((self as *const Self).cast::<T>(), 3) }
     }
 }
 
@@ -250,7 +257,29 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rgb_defaults() {
+    fn test_rgb_new() {
+        let cu8 = Rgb::<u8>::new(18, 86, 205);
+        assert_eq!(cu8.r, 18);
+        assert_eq!(cu8.g, 86);
+        assert_eq!(cu8.b, 205);
+
+        let cf32 = Rgb::<f32>::new(0.10, 0.25, 0.40);
+        assert_eq!(cf32.r, 0.10);
+        assert_eq!(cf32.g, 0.25);
+        assert_eq!(cf32.b, 0.40);
+    }
+
+    #[test]
+    fn test_as_slice() {
+        let cu8 = Rgb::<u8>::new(18, 86, 205);
+        assert_eq!(cu8.as_slice(), &[18, 86, 205]);
+
+        let cf32 = Rgb::<f32>::new(0.10, 0.25, 0.40);
+        assert_eq!(cf32.as_slice(), &[0.10, 0.25, 0.40]);
+    }
+
+    #[test]
+    fn test_rgb_default() {
         let cu8 = Rgb::<u8>::default();
         let cf32 = Rgb::<f32>::default();
         assert_eq!(cu8.r, 0);

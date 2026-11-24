@@ -1,11 +1,10 @@
-use crate::{Cmyk, ColorChannel, Hsl, Hsv, ParseColorError, Rgb};
+use crate::{Cmyk, Color, ColorChannel, Hsl, Hsv, ParseColorError, Rgb};
 
 /// Stores color information as red, green, and blue with an alpha channel.
 ///
 /// # Type Parameters
 ///
 /// * `T` - The numeric type of the color channels. This is restricted by the [`ColorChannel`] trait.
-#[allow(clippy::upper_case_acronyms)]
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rgba<T: ColorChannel> {
@@ -44,6 +43,14 @@ impl Default for Rgba<f32> {
             b: 0.0,
             a: 1.0,
         }
+    }
+}
+
+impl<T: ColorChannel> Color<T> for Rgba<T> {
+    fn as_slice(&self) -> &[T] {
+        // SAFETY: `Rgba` is `#[repr(C)]` and consists of exactly four fields of type `T`,
+        // so it has the same layout as `[T; 4]`.
+        unsafe { std::slice::from_raw_parts((self as *const Self).cast::<T>(), 4) }
     }
 }
 
@@ -238,7 +245,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_rgba_defaults() {
+    fn test_rgba_new() {
+        let cu8 = Rgba::<u8>::new(18, 86, 205, 163);
+        assert_eq!(cu8.r, 18);
+        assert_eq!(cu8.g, 86);
+        assert_eq!(cu8.b, 205);
+        assert_eq!(cu8.a, 163);
+
+        let cf32 = Rgba::<f32>::new(0.10, 0.25, 0.40, 0.86);
+        assert_eq!(cf32.r, 0.10);
+        assert_eq!(cf32.g, 0.25);
+        assert_eq!(cf32.b, 0.40);
+        assert_eq!(cf32.a, 0.86);
+    }
+
+    #[test]
+    fn test_as_slice() {
+        let cu8 = Rgba::<u8>::new(18, 86, 205, 163);
+        assert_eq!(cu8.as_slice(), &[18, 86, 205, 163]);
+
+        let cf32 = Rgba::<f32>::new(0.10, 0.25, 0.40, 0.86);
+        assert_eq!(cf32.as_slice(), &[0.10, 0.25, 0.40, 0.86]);
+    }
+
+    #[test]
+    fn test_rgba_default() {
         let cu8 = Rgba::<u8>::default();
         let cf32 = Rgba::<f32>::default();
         assert_eq!(cu8.r, 0);
@@ -247,6 +278,7 @@ mod tests {
         assert_eq!(cu8.a, 255);
         assert_eq!(cf32.r, 0.0);
         assert_eq!(cf32.g, 0.0);
+        assert_eq!(cf32.b, 0.0);
         assert_eq!(cf32.a, 1.0);
     }
 

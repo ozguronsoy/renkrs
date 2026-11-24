@@ -1,7 +1,6 @@
-use crate::{Cmyk, Hsl, Rgb, Rgba};
+use crate::{Cmyk, Color, Hsl, Rgb, Rgba};
 
 /// Stores color information as hue, saturation, and value.
-#[allow(clippy::upper_case_acronyms)]
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Hsv {
@@ -26,6 +25,14 @@ impl Default for Hsv {
             s: 0.0,
             v: 0.0,
         }
+    }
+}
+
+impl Color<f32> for Hsv {
+    fn as_slice(&self) -> &[f32] {
+        // SAFETY: `Hsv` is `#[repr(C)]` and consists of exactly three fields of type `f32`,
+        // so it has the same layout as `[f32; 3]`.
+        unsafe { std::slice::from_raw_parts((self as *const Self).cast::<f32>(), 3) }
     }
 }
 
@@ -93,6 +100,28 @@ impl From<Cmyk> for Hsv {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_hsv_new() {
+        let hsv = Hsv::new(210.0, 0.8, 1.0);
+        assert_eq!(hsv.h, 210.0);
+        assert_eq!(hsv.s, 0.8);
+        assert_eq!(hsv.v, 1.0);
+    }
+
+    #[test]
+    fn test_hsv_default() {
+        let hsv = Hsv::default();
+        assert_eq!(hsv.h, 0.0);
+        assert_eq!(hsv.s, 0.0);
+        assert_eq!(hsv.v, 0.0);
+    }
+
+    #[test]
+    fn test_as_slice() {
+        let hsv = Hsv::new(210.0, 0.8, 1.0);
+        assert_eq!(hsv.as_slice(), &[210.0, 0.8, 1.0]);
+    }
 
     #[test]
     fn test_hsv_to_rgb_conversion() {

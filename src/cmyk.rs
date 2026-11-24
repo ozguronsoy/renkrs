@@ -1,7 +1,6 @@
-use crate::{Hsl, Hsv, Rgb, Rgba};
+use crate::{Color, Hsl, Hsv, Rgb, Rgba};
 
 /// Stores color information as cyan, magenta, yellow, and key.
-#[allow(clippy::upper_case_acronyms)]
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Cmyk {
@@ -29,6 +28,14 @@ impl Default for Cmyk {
             y: 0.0,
             k: 0.0,
         }
+    }
+}
+
+impl Color<f32> for Cmyk {
+    fn as_slice(&self) -> &[f32] {
+        // SAFETY: `Cmyk` is `#[repr(C)]` and consists of exactly four fields of type `f32`,
+        // so it has the same layout as `[f32; 4]`.
+        unsafe { std::slice::from_raw_parts((self as *const Self).cast::<f32>(), 4) }
     }
 }
 
@@ -86,6 +93,30 @@ impl From<Hsv> for Cmyk {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_cmyk_new() {
+        let cmyk = Cmyk::new(0.5, 0.25, 0.0, 0.2);
+        assert_eq!(cmyk.c, 0.5);
+        assert_eq!(cmyk.m, 0.25);
+        assert_eq!(cmyk.y, 0.0);
+        assert_eq!(cmyk.k, 0.2);
+    }
+
+    #[test]
+    fn test_cmyk_default() {
+        let cmyk = Cmyk::default();
+        assert_eq!(cmyk.c, 0.0);
+        assert_eq!(cmyk.m, 0.0);
+        assert_eq!(cmyk.y, 0.0);
+        assert_eq!(cmyk.k, 0.0);
+    }
+
+    #[test]
+    fn test_as_slice() {
+        let cmyk = Cmyk::new(0.5, 0.25, 0.0, 0.2);
+        assert_eq!(cmyk.as_slice(), &[0.5, 0.25, 0.0, 0.2]);
+    }
 
     #[test]
     fn test_cmyk_to_rgb_conversion() {
