@@ -1,3 +1,4 @@
+use crate::color_channel::for_each_channel_pair;
 use crate::{Cmyk, Color, ColorChannel, Hsl, Hsv, ParseColorError, Rgb};
 
 /// Stores color information as red, green, and blue with an alpha channel.
@@ -24,25 +25,10 @@ impl<T: ColorChannel> Rgba<T> {
     }
 }
 
-impl Default for Rgba<u8> {
+impl<T: ColorChannel> Default for Rgba<T> {
     fn default() -> Self {
-        Self {
-            r: 0,
-            g: 0,
-            b: 0,
-            a: 255,
-        }
-    }
-}
-
-impl Default for Rgba<f32> {
-    fn default() -> Self {
-        Self {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-            a: 1.0,
-        }
+        let zero = T::from_u8(0);
+        Self::new(zero, zero, zero, T::from_u8(255))
     }
 }
 
@@ -54,115 +40,59 @@ impl<T: ColorChannel> Color<T> for Rgba<T> {
     }
 }
 
-impl From<Rgba<u8>> for Rgba<f32> {
-    fn from(rgba: Rgba<u8>) -> Self {
-        Self {
-            r: (rgba.r as f32) / 255.0,
-            g: (rgba.g as f32) / 255.0,
-            b: (rgba.b as f32) / 255.0,
-            a: (rgba.a as f32) / 255.0,
+macro_rules! impl_rgba_channel_conversion {
+    ($from:ty, $to:ty) => {
+        impl From<Rgba<$from>> for Rgba<$to> {
+            fn from(rgba: Rgba<$from>) -> Self {
+                Self::new(
+                    rgba.r.convert(),
+                    rgba.g.convert(),
+                    rgba.b.convert(),
+                    rgba.a.convert(),
+                )
+            }
         }
+    };
+}
+
+for_each_channel_pair!(impl_rgba_channel_conversion);
+
+impl<T: ColorChannel, U: ColorChannel> From<Rgb<T>> for Rgba<U> {
+    fn from(rgb: Rgb<T>) -> Self {
+        Self::new(
+            rgb.r.convert(),
+            rgb.g.convert(),
+            rgb.b.convert(),
+            U::from_u8(255),
+        )
     }
 }
 
-impl From<Rgba<f32>> for Rgba<u8> {
-    fn from(rgba: Rgba<f32>) -> Self {
-        Self {
-            r: (rgba.r * 255.0).round() as u8,
-            g: (rgba.g * 255.0).round() as u8,
-            b: (rgba.b * 255.0).round() as u8,
-            a: (rgba.a * 255.0).round() as u8,
-        }
-    }
-}
-
-impl From<Rgb<u8>> for Rgba<u8> {
-    fn from(rgb: Rgb<u8>) -> Self {
-        Self {
-            r: rgb.r,
-            g: rgb.g,
-            b: rgb.b,
-            a: 255,
-        }
-    }
-}
-
-impl From<Rgb<u8>> for Rgba<f32> {
-    fn from(rgb: Rgb<u8>) -> Self {
-        Self {
-            r: (rgb.r as f32) / 255.0,
-            g: (rgb.g as f32) / 255.0,
-            b: (rgb.b as f32) / 255.0,
-            a: 1.0,
-        }
-    }
-}
-
-impl From<Rgb<f32>> for Rgba<f32> {
-    fn from(rgb: Rgb<f32>) -> Self {
-        Self {
-            r: rgb.r,
-            g: rgb.g,
-            b: rgb.b,
-            a: 1.0,
-        }
-    }
-}
-
-impl From<Rgb<f32>> for Rgba<u8> {
-    fn from(rgb: Rgb<f32>) -> Self {
-        Self {
-            r: (rgb.r * 255.0).round() as u8,
-            g: (rgb.g * 255.0).round() as u8,
-            b: (rgb.b * 255.0).round() as u8,
-            a: 255,
-        }
-    }
-}
-
-impl From<Hsl> for Rgba<u8> {
+impl<T: ColorChannel> From<Hsl> for Rgba<T> {
     fn from(hsl: Hsl) -> Self {
-        Rgb::<u8>::from(hsl).into()
+        Rgb::<T>::from(hsl).into()
     }
 }
 
-impl From<Hsl> for Rgba<f32> {
-    fn from(hsl: Hsl) -> Self {
-        Rgb::<f32>::from(hsl).into()
-    }
-}
-
-impl From<Hsv> for Rgba<u8> {
+impl<T: ColorChannel> From<Hsv> for Rgba<T> {
     fn from(hsv: Hsv) -> Self {
-        Rgb::<f32>::from(hsv).into()
+        Rgb::<T>::from(hsv).into()
     }
 }
 
-impl From<Hsv> for Rgba<f32> {
-    fn from(hsv: Hsv) -> Self {
-        Rgb::<f32>::from(hsv).into()
-    }
-}
-
-impl From<Cmyk> for Rgba<u8> {
+impl<T: ColorChannel> From<Cmyk> for Rgba<T> {
     fn from(cmyk: Cmyk) -> Self {
-        Rgb::<f32>::from(cmyk).into()
+        Rgb::<T>::from(cmyk).into()
     }
 }
 
-impl From<Cmyk> for Rgba<f32> {
-    fn from(cmyk: Cmyk) -> Self {
-        Rgb::<f32>::from(cmyk).into()
-    }
-}
-
-impl std::str::FromStr for Rgba<u8> {
+impl<T: ColorChannel> std::str::FromStr for Rgba<T> {
     type Err = ParseColorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let hex = s.trim().trim_start_matches('#');
         if hex.len() == 6 {
-            let rgb: Rgb<u8> = hex.parse()?;
+            let rgb: Rgb<T> = hex.parse()?;
             Ok(rgb.into())
         } else if hex.len() == 8 {
             let r =
@@ -173,70 +103,55 @@ impl std::str::FromStr for Rgba<u8> {
                 u8::from_str_radix(&hex[4..6], 16).map_err(|_| ParseColorError::InvalidFormat)?;
             let a =
                 u8::from_str_radix(&hex[6..8], 16).map_err(|_| ParseColorError::InvalidFormat)?;
-            Ok(Self { r, g, b, a })
+            Ok(Self::new(
+                T::from_u8(r),
+                T::from_u8(g),
+                T::from_u8(b),
+                T::from_u8(a),
+            ))
         } else {
             Err(ParseColorError::InvalidLength)
         }
     }
 }
 
-impl std::str::FromStr for Rgba<f32> {
-    type Err = ParseColorError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let rgba: Rgba<u8> = s.parse()?;
-        Ok(rgba.into())
-    }
-}
-
-impl std::fmt::LowerHex for Rgba<u8> {
+impl<T: ColorChannel> std::fmt::LowerHex for Rgba<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let rgba: Rgba<u8> = Rgba::new(
+            self.r.convert(),
+            self.g.convert(),
+            self.b.convert(),
+            self.a.convert(),
+        );
+        // If the user uses the alternate flag `{:#x}`, prefix with '#'
         if f.alternate() {
-            write!(
-                f,
-                "#{:02x}{:02x}{:02x}{:02x}",
-                self.r, self.g, self.b, self.a
-            )
-        } else {
-            write!(
-                f,
-                "{:02x}{:02x}{:02x}{:02x}",
-                self.r, self.g, self.b, self.a
-            )
+            write!(f, "#")?;
         }
+        write!(
+            f,
+            "{:02x}{:02x}{:02x}{:02x}",
+            rgba.r, rgba.g, rgba.b, rgba.a
+        )
     }
 }
 
-impl std::fmt::LowerHex for Rgba<f32> {
+impl<T: ColorChannel> std::fmt::UpperHex for Rgba<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let rgba: Rgba<u8> = (*self).into();
-        std::fmt::LowerHex::fmt(&rgba, f)
-    }
-}
-
-impl std::fmt::UpperHex for Rgba<u8> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let rgba: Rgba<u8> = Rgba::new(
+            self.r.convert(),
+            self.g.convert(),
+            self.b.convert(),
+            self.a.convert(),
+        );
         // If the user uses the alternate flag `{:#X}`, prefix with '#'
         if f.alternate() {
-            write!(
-                f,
-                "#{:02X}{:02X}{:02X}{:02X}",
-                self.r, self.g, self.b, self.a
-            )
-        } else {
-            write!(
-                f,
-                "{:02X}{:02X}{:02X}{:02X}",
-                self.r, self.g, self.b, self.a
-            )
+            write!(f, "#")?;
         }
-    }
-}
-
-impl std::fmt::UpperHex for Rgba<f32> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let rgba: Rgba<u8> = (*self).into();
-        std::fmt::UpperHex::fmt(&rgba, f)
+        write!(
+            f,
+            "{:02X}{:02X}{:02X}{:02X}",
+            rgba.r, rgba.g, rgba.b, rgba.a
+        )
     }
 }
 
@@ -266,6 +181,36 @@ mod tests {
 
         let cf32 = Rgba::<f32>::new(0.10, 0.25, 0.40, 0.86);
         assert_eq!(cf32.as_slice(), &[0.10, 0.25, 0.40, 0.86]);
+    }
+
+    #[test]
+    fn test_rgba_channel_type_conversion() {
+        let cu8 = Rgba::<u8>::new(0x12, 0x80, 0xFF, 0x00);
+
+        let cu16: Rgba<u16> = cu8.into();
+        assert_eq!(cu16, Rgba::new(0x1212, 0x8080, 0xFFFF, 0));
+        assert_eq!(Rgba::<u8>::from(cu16), cu8);
+
+        let ci16: Rgba<i16> = Rgba::<i8>::new(-127, 0, 127, 127).into();
+        assert_eq!(ci16, Rgba::new(-i16::MAX, 0, i16::MAX, i16::MAX));
+        assert_eq!(Rgba::<u8>::from(ci16), Rgba::new(0, 0, 255, 255));
+
+        let cf64: Rgba<f64> = Rgba::<u16>::new(u16::MAX, 0, 0, u16::MAX).into();
+        assert_eq!(cf64, Rgba::new(1.0, 0.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn test_rgba_extended_channel_types() {
+        assert_eq!(Rgba::<u16>::default(), Rgba::new(0, 0, 0, u16::MAX));
+        assert_eq!(Rgba::<i8>::default(), Rgba::new(0, 0, 0, i8::MAX));
+        assert_eq!(Rgba::<f64>::default(), Rgba::new(0.0, 0.0, 0.0, 1.0));
+
+        let cu16: Rgba<u16> = "#00FF0080".parse().unwrap();
+        assert_eq!(cu16, Rgba::new(0, u16::MAX, 0, 0x8080));
+        assert_eq!(format!("{:#X}", cu16), "#00FF0080");
+
+        let ci32: Rgba<i32> = Rgb::<u8>::new(255, 0, 0).into();
+        assert_eq!(ci32, Rgba::new(i32::MAX, 0, 0, i32::MAX));
     }
 
     #[test]
@@ -324,9 +269,9 @@ mod tests {
 
         let cf32_2 = Rgba::<f32>::new(0.30, 0.60, 0.90, 0.50);
         let cu8_2: Rgb<u8> = cf32_2.into();
-        assert_eq!(cu8_2.r, (0.30_f32 * 255.0).round() as u8);
-        assert_eq!(cu8_2.g, (0.60_f32 * 255.0).round() as u8);
-        assert_eq!(cu8_2.b, (0.90_f32 * 255.0).round() as u8);
+        assert_eq!(cu8_2.r, 77);
+        assert_eq!(cu8_2.g, 153);
+        assert_eq!(cu8_2.b, 229);
     }
 
     #[test]

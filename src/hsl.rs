@@ -1,4 +1,4 @@
-use crate::{Cmyk, Color, Hsv, Rgb, Rgba};
+use crate::{Cmyk, Color, ColorChannel, Hsv, Rgb, Rgba};
 
 /// Stores color information as hue, saturation, and lightness.
 #[repr(C)]
@@ -36,16 +36,11 @@ impl Color<f32> for Hsl {
     }
 }
 
-impl From<Rgb<u8>> for Hsl {
-    fn from(rgb: Rgb<u8>) -> Self {
-        Rgb::<f32>::from(rgb).into()
-    }
-}
-
-impl From<Rgb<f32>> for Hsl {
-    fn from(rgb: Rgb<f32>) -> Self {
-        let max = rgb.r.max(rgb.g).max(rgb.b);
-        let min = rgb.r.min(rgb.g).min(rgb.b);
+impl<T: ColorChannel> From<Rgb<T>> for Hsl {
+    fn from(rgb: Rgb<T>) -> Self {
+        let (r, g, b): (f32, f32, f32) = (rgb.r.convert(), rgb.g.convert(), rgb.b.convert());
+        let max = r.max(g).max(b);
+        let min = r.min(g).min(b);
         let delta = max - min;
         let l = (max + min) / 2.0;
 
@@ -57,12 +52,12 @@ impl From<Rgb<f32>> for Hsl {
 
         let mut h = if delta == 0.0 {
             0.0
-        } else if max == rgb.r {
-            60.0 * (((rgb.g - rgb.b) / delta) % 6.0)
-        } else if max == rgb.g {
-            60.0 * (((rgb.b - rgb.r) / delta) + 2.0)
+        } else if max == r {
+            60.0 * (((g - b) / delta) % 6.0)
+        } else if max == g {
+            60.0 * (((b - r) / delta) + 2.0)
         } else {
-            60.0 * (((rgb.r - rgb.g) / delta) + 4.0)
+            60.0 * (((r - g) / delta) + 4.0)
         };
 
         if h < 0.0 {
@@ -72,15 +67,9 @@ impl From<Rgb<f32>> for Hsl {
     }
 }
 
-impl From<Rgba<u8>> for Hsl {
-    fn from(rgba: Rgba<u8>) -> Self {
-        Rgb::<f32>::from(rgba).into()
-    }
-}
-
-impl From<Rgba<f32>> for Hsl {
-    fn from(rgba: Rgba<f32>) -> Self {
-        Rgb::<f32>::from(rgba).into()
+impl<T: ColorChannel> From<Rgba<T>> for Hsl {
+    fn from(rgba: Rgba<T>) -> Self {
+        Rgb::<T>::from(rgba).into()
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::{Color, Hsl, Hsv, Rgb, Rgba};
+use crate::{Color, ColorChannel, Hsl, Hsv, Rgb, Rgba};
 
 /// Stores color information as cyan, magenta, yellow, and key.
 #[repr(C)]
@@ -39,15 +39,10 @@ impl Color<f32> for Cmyk {
     }
 }
 
-impl From<Rgb<u8>> for Cmyk {
-    fn from(rgb: Rgb<u8>) -> Self {
-        Rgb::<f32>::from(rgb).into()
-    }
-}
-
-impl From<Rgb<f32>> for Cmyk {
-    fn from(rgb: Rgb<f32>) -> Self {
-        let k = 1.0 - rgb.r.max(rgb.g).max(rgb.b);
+impl<T: ColorChannel> From<Rgb<T>> for Cmyk {
+    fn from(rgb: Rgb<T>) -> Self {
+        let (r, g, b): (f32, f32, f32) = (rgb.r.convert(), rgb.g.convert(), rgb.b.convert());
+        let k = 1.0 - r.max(g).max(b);
         if (k - 1.0).abs() < f32::EPSILON {
             Self {
                 c: 0.0,
@@ -57,24 +52,18 @@ impl From<Rgb<f32>> for Cmyk {
             }
         } else {
             Self {
-                c: (1.0 - rgb.r - k) / (1.0 - k),
-                m: (1.0 - rgb.g - k) / (1.0 - k),
-                y: (1.0 - rgb.b - k) / (1.0 - k),
+                c: (1.0 - r - k) / (1.0 - k),
+                m: (1.0 - g - k) / (1.0 - k),
+                y: (1.0 - b - k) / (1.0 - k),
                 k,
             }
         }
     }
 }
 
-impl From<Rgba<u8>> for Cmyk {
-    fn from(rgba: Rgba<u8>) -> Self {
-        Rgb::<f32>::from(rgba).into()
-    }
-}
-
-impl From<Rgba<f32>> for Cmyk {
-    fn from(rgba: Rgba<f32>) -> Self {
-        Rgb::<f32>::from(rgba).into()
+impl<T: ColorChannel> From<Rgba<T>> for Cmyk {
+    fn from(rgba: Rgba<T>) -> Self {
+        Rgb::<T>::from(rgba).into()
     }
 }
 

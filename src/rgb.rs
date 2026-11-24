@@ -1,3 +1,4 @@
+use crate::color_channel::for_each_channel_pair;
 use crate::{Cmyk, Color, ColorChannel, Hsl, Hsv, ParseColorError, Rgba};
 
 /// Stores color information as red, green, and blue.
@@ -18,19 +19,10 @@ impl<T: ColorChannel> Rgb<T> {
     }
 }
 
-impl Default for Rgb<u8> {
+impl<T: ColorChannel> Default for Rgb<T> {
     fn default() -> Self {
-        Self { r: 0, g: 0, b: 0 }
-    }
-}
-
-impl Default for Rgb<f32> {
-    fn default() -> Self {
-        Self {
-            r: 0.0,
-            g: 0.0,
-            b: 0.0,
-        }
+        let zero = T::from_u8(0);
+        Self::new(zero, zero, zero)
     }
 }
 
@@ -42,73 +34,25 @@ impl<T: ColorChannel> Color<T> for Rgb<T> {
     }
 }
 
-impl From<Rgb<u8>> for Rgb<f32> {
-    fn from(rgb: Rgb<u8>) -> Self {
-        Self {
-            r: (rgb.r as f32) / 255.0,
-            g: (rgb.g as f32) / 255.0,
-            b: (rgb.b as f32) / 255.0,
+macro_rules! impl_rgb_channel_conversion {
+    ($from:ty, $to:ty) => {
+        impl From<Rgb<$from>> for Rgb<$to> {
+            fn from(rgb: Rgb<$from>) -> Self {
+                Self::new(rgb.r.convert(), rgb.g.convert(), rgb.b.convert())
+            }
         }
+    };
+}
+
+for_each_channel_pair!(impl_rgb_channel_conversion);
+
+impl<T: ColorChannel, U: ColorChannel> From<Rgba<T>> for Rgb<U> {
+    fn from(rgba: Rgba<T>) -> Self {
+        Self::new(rgba.r.convert(), rgba.g.convert(), rgba.b.convert())
     }
 }
 
-impl From<Rgb<f32>> for Rgb<u8> {
-    fn from(rgb: Rgb<f32>) -> Self {
-        Self {
-            r: (rgb.r * 255.0).round() as u8,
-            g: (rgb.g * 255.0).round() as u8,
-            b: (rgb.b * 255.0).round() as u8,
-        }
-    }
-}
-
-impl From<Rgba<u8>> for Rgb<u8> {
-    fn from(rgba: Rgba<u8>) -> Self {
-        Self {
-            r: rgba.r,
-            g: rgba.g,
-            b: rgba.b,
-        }
-    }
-}
-
-impl From<Rgba<u8>> for Rgb<f32> {
-    fn from(rgba: Rgba<u8>) -> Self {
-        Self {
-            r: (rgba.r as f32) / 255.0,
-            g: (rgba.g as f32) / 255.0,
-            b: (rgba.b as f32) / 255.0,
-        }
-    }
-}
-
-impl From<Rgba<f32>> for Rgb<u8> {
-    fn from(rgba: Rgba<f32>) -> Self {
-        Self {
-            r: (rgba.r * 255.0).round() as u8,
-            g: (rgba.g * 255.0).round() as u8,
-            b: (rgba.b * 255.0).round() as u8,
-        }
-    }
-}
-
-impl From<Rgba<f32>> for Rgb<f32> {
-    fn from(rgba: Rgba<f32>) -> Self {
-        Self {
-            r: rgba.r,
-            g: rgba.g,
-            b: rgba.b,
-        }
-    }
-}
-
-impl From<Hsl> for Rgb<u8> {
-    fn from(hsl: Hsl) -> Self {
-        Rgb::<f32>::from(hsl).into()
-    }
-}
-
-impl From<Hsl> for Rgb<f32> {
+impl<T: ColorChannel> From<Hsl> for Rgb<T> {
     fn from(hsl: Hsl) -> Self {
         let c = (1.0 - (2.0 * hsl.l - 1.0).abs()) * hsl.s;
         let x = c * (1.0 - ((hsl.h / 60.0) % 2.0 - 1.0).abs());
@@ -128,21 +72,15 @@ impl From<Hsl> for Rgb<f32> {
             (c, 0.0, x)
         };
 
-        Self {
-            r: r_prime + m,
-            g: g_prime + m,
-            b: b_prime + m,
-        }
+        Self::new(
+            T::from_f32(r_prime + m),
+            T::from_f32(g_prime + m),
+            T::from_f32(b_prime + m),
+        )
     }
 }
 
-impl From<Hsv> for Rgb<u8> {
-    fn from(hsv: Hsv) -> Self {
-        Rgb::<f32>::from(hsv).into()
-    }
-}
-
-impl From<Hsv> for Rgb<f32> {
+impl<T: ColorChannel> From<Hsv> for Rgb<T> {
     fn from(hsv: Hsv) -> Self {
         let c = hsv.v * hsv.s;
         let x = c * (1.0 - ((hsv.h / 60.0) % 2.0 - 1.0).abs());
@@ -162,31 +100,25 @@ impl From<Hsv> for Rgb<f32> {
             (c, 0.0, x)
         };
 
-        Self {
-            r: r_prime + m,
-            g: g_prime + m,
-            b: b_prime + m,
-        }
+        Self::new(
+            T::from_f32(r_prime + m),
+            T::from_f32(g_prime + m),
+            T::from_f32(b_prime + m),
+        )
     }
 }
 
-impl From<Cmyk> for Rgb<u8> {
+impl<T: ColorChannel> From<Cmyk> for Rgb<T> {
     fn from(cmyk: Cmyk) -> Self {
-        Rgb::<f32>::from(cmyk).into()
+        Self::new(
+            T::from_f32((1.0 - cmyk.c) * (1.0 - cmyk.k)),
+            T::from_f32((1.0 - cmyk.m) * (1.0 - cmyk.k)),
+            T::from_f32((1.0 - cmyk.y) * (1.0 - cmyk.k)),
+        )
     }
 }
 
-impl From<Cmyk> for Rgb<f32> {
-    fn from(cmyk: Cmyk) -> Self {
-        Self {
-            r: (1.0 - cmyk.c) * (1.0 - cmyk.k),
-            g: (1.0 - cmyk.m) * (1.0 - cmyk.k),
-            b: (1.0 - cmyk.y) * (1.0 - cmyk.k),
-        }
-    }
-}
-
-impl std::str::FromStr for Rgb<u8> {
+impl<T: ColorChannel> std::str::FromStr for Rgb<T> {
     type Err = ParseColorError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -198,9 +130,9 @@ impl std::str::FromStr for Rgb<u8> {
                 u8::from_str_radix(&hex[2..4], 16).map_err(|_| ParseColorError::InvalidFormat)?;
             let b =
                 u8::from_str_radix(&hex[4..6], 16).map_err(|_| ParseColorError::InvalidFormat)?;
-            Ok(Self { r, g, b })
+            Ok(Self::new(T::from_u8(r), T::from_u8(g), T::from_u8(b)))
         } else if hex.len() == 8 {
-            let rgba: Rgba<u8> = hex.parse()?;
+            let rgba: Rgba<T> = hex.parse()?;
             Ok(rgba.into())
         } else {
             Err(ParseColorError::InvalidLength)
@@ -208,47 +140,25 @@ impl std::str::FromStr for Rgb<u8> {
     }
 }
 
-impl std::str::FromStr for Rgb<f32> {
-    type Err = ParseColorError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let rgb: Rgb<u8> = s.parse()?;
-        Ok(rgb.into())
-    }
-}
-
-impl std::fmt::LowerHex for Rgb<u8> {
+impl<T: ColorChannel> std::fmt::LowerHex for Rgb<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let rgb: Rgb<u8> = Rgb::new(self.r.convert(), self.g.convert(), self.b.convert());
+        // If the user uses the alternate flag `{:#x}`, prefix with '#'
         if f.alternate() {
-            write!(f, "#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
-        } else {
-            write!(f, "{:02x}{:02x}{:02x}", self.r, self.g, self.b)
+            write!(f, "#")?;
         }
+        write!(f, "{:02x}{:02x}{:02x}", rgb.r, rgb.g, rgb.b)
     }
 }
 
-impl std::fmt::LowerHex for Rgb<f32> {
+impl<T: ColorChannel> std::fmt::UpperHex for Rgb<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let rgb: Rgb<u8> = (*self).into();
-        std::fmt::LowerHex::fmt(&rgb, f)
-    }
-}
-
-impl std::fmt::UpperHex for Rgb<u8> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let rgb: Rgb<u8> = Rgb::new(self.r.convert(), self.g.convert(), self.b.convert());
         // If the user uses the alternate flag `{:#X}`, prefix with '#'
         if f.alternate() {
-            write!(f, "#{:02X}{:02X}{:02X}", self.r, self.g, self.b)
-        } else {
-            write!(f, "{:02X}{:02X}{:02X}", self.r, self.g, self.b)
+            write!(f, "#")?;
         }
-    }
-}
-
-impl std::fmt::UpperHex for Rgb<f32> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let rgb: Rgb<u8> = (*self).into();
-        std::fmt::UpperHex::fmt(&rgb, f)
+        write!(f, "{:02X}{:02X}{:02X}", rgb.r, rgb.g, rgb.b)
     }
 }
 
@@ -276,6 +186,40 @@ mod tests {
 
         let cf32 = Rgb::<f32>::new(0.10, 0.25, 0.40);
         assert_eq!(cf32.as_slice(), &[0.10, 0.25, 0.40]);
+    }
+
+    #[test]
+    fn test_rgb_channel_type_conversion() {
+        let cu8 = Rgb::<u8>::new(0x12, 0x80, 0xFF);
+
+        let cu16: Rgb<u16> = cu8.into();
+        assert_eq!(cu16, Rgb::new(0x1212, 0x8080, 0xFFFF));
+        assert_eq!(Rgb::<u8>::from(cu16), cu8);
+
+        let ci8: Rgb<i8> = cu8.into();
+        assert_eq!(ci8, Rgb::new(9, 64, 127));
+
+        let ci32: Rgb<i32> = Rgb::<f64>::new(1.0, 0.0, -1.0).into();
+        assert_eq!(ci32, Rgb::new(i32::MAX, 0, -i32::MAX));
+        assert_eq!(Rgb::<u8>::from(ci32), Rgb::new(255, 0, 0));
+
+        let cf64: Rgb<f64> = Rgb::<i16>::new(i16::MAX, 0, i16::MAX).into();
+        assert_eq!(cf64, Rgb::new(1.0, 0.0, 1.0));
+    }
+
+    #[test]
+    fn test_rgb_extended_channel_types() {
+        assert_eq!(Rgb::<u16>::default(), Rgb::new(0, 0, 0));
+        assert_eq!(Rgb::<f64>::default(), Rgb::new(0.0, 0.0, 0.0));
+
+        let ci16: Rgb<i16> = "#FF0000".parse().unwrap();
+        assert_eq!(ci16, Rgb::new(i16::MAX, 0, 0));
+        assert_eq!(format!("{:#x}", ci16), "#ff0000");
+
+        let cu16: Rgb<u16> = Hsl::new(0.0, 1.0, 0.5).into();
+        assert_eq!(cu16, Rgb::new(u16::MAX, 0, 0));
+        let hsl: Hsl = cu16.into();
+        assert_eq!(hsl, Hsl::new(0.0, 1.0, 0.5));
     }
 
     #[test]

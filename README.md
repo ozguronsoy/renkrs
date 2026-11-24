@@ -33,5 +33,22 @@ let hex_upper: String = format!("{:#X}", color_f32);
 let channels: &[f32] = cmyk.as_slice();
 ```
 
+### Channel types
+
+`Rgb<T>` and `Rgba<T>` support the following channel types, and can be converted between any two of them with `into`:
+
+| Type  | Range                     | Notes                                                    |
+|-------|---------------------------|----------------------------------------------------------|
+| `u8`  | `0..=255`                 |                                                          |
+| `u16` | `0..=65535`               |                                                          |
+| `u32` | `0..=4294967295`          |                                                          |
+| `i8`  | `-127..=127`              | Signed normalized (SNORM).                               |
+| `i16` | `-32767..=32767`          | Signed normalized (SNORM).                               |
+| `i32` | `-2147483647..=2147483647`| Signed normalized (SNORM).                               |
+| `f32` | `0.0..=1.0`               |                                                          |
+| `f64` | `0.0..=1.0`               |                                                          |
+
+Negative values of signed channels are clamped to `0` when converted to unsigned channels or hex strings. `Hsl`, `Hsv`, and `Cmyk` always use `f32` channels.
+
 ## License
 Licensed under the BSD-3-Clause License.
