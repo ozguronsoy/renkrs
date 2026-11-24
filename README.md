@@ -18,16 +18,16 @@ cargo add renkrs
 
 ## Usage
 
-`renkrs` implements `From` conversions between each type, allowing one to seamlessly convert between color spaces using `into`. `renkrs` also implements `FromStr`, `LowerHex`, and `UpperHex` for RGB and RGBA colors.
+`renkrs` implements `From` conversions between each type, allowing one to seamlessly convert between color spaces using `into`. `renkrs` also implements `FromStr`, `LowerHex`, and `UpperHex` for `Rgb` and `Rgba`.
 
 ```rust
-use renkrs::{RGB, RGBA, HSL, HSV, CMYK};
+use renkrs::{Rgb, Rgba, Hsl, Hsv, Cmyk};
 
-let color_u8: RGBA<u8> = "#FF5733".parse().unwrap();
-let color_f32: RGB<f32> = color_u8.into();
-let hsl: HSL = color_u8.into();
-let hsv: HSV = color_f32.into();
-let cmyk: CMYK = hsv.into();
+let color_u8: Rgba<u8> = "#FF5733".parse().unwrap();
+let color_f32: Rgb<f32> = color_u8.into();
+let hsl: Hsl = color_u8.into();
+let hsv: Hsv = color_f32.into();
+let cmyk: Cmyk = hsv.into();
 let hex_lower: String = format!("{:#x}", color_u8);
 let hex_upper: String = format!("{:#X}", color_f32);
 ```

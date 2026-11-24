@@ -1,10 +1,10 @@
-use crate::{CMYK, HSL, RGB, RGBA};
+use crate::{Cmyk, Hsl, Rgb, Rgba};
 
 /// Stores color information as hue, saturation, and value.
 #[allow(clippy::upper_case_acronyms)]
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct HSV {
+pub struct Hsv {
     /// Hue. Ranges from 0 to 360.
     pub h: f32,
     /// Saturation. Ranges from 0 to 1.
@@ -13,13 +13,13 @@ pub struct HSV {
     pub v: f32,
 }
 
-impl HSV {
+impl Hsv {
     pub fn new(h: f32, s: f32, v: f32) -> Self {
         Self { h, s, v }
     }
 }
 
-impl Default for HSV {
+impl Default for Hsv {
     fn default() -> Self {
         Self {
             h: 0.0,
@@ -29,14 +29,14 @@ impl Default for HSV {
     }
 }
 
-impl From<RGB<u8>> for HSV {
-    fn from(rgb: RGB<u8>) -> Self {
-        RGB::<f32>::from(rgb).into()
+impl From<Rgb<u8>> for Hsv {
+    fn from(rgb: Rgb<u8>) -> Self {
+        Rgb::<f32>::from(rgb).into()
     }
 }
 
-impl From<RGB<f32>> for HSV {
-    fn from(rgb: RGB<f32>) -> Self {
+impl From<Rgb<f32>> for Hsv {
+    fn from(rgb: Rgb<f32>) -> Self {
         let max = rgb.r.max(rgb.g).max(rgb.b);
         let min = rgb.r.min(rgb.g).min(rgb.b);
         let delta = max - min;
@@ -60,20 +60,20 @@ impl From<RGB<f32>> for HSV {
     }
 }
 
-impl From<RGBA<u8>> for HSV {
-    fn from(rgba: RGBA<u8>) -> Self {
-        RGB::<f32>::from(rgba).into()
+impl From<Rgba<u8>> for Hsv {
+    fn from(rgba: Rgba<u8>) -> Self {
+        Rgb::<f32>::from(rgba).into()
     }
 }
 
-impl From<RGBA<f32>> for HSV {
-    fn from(rgba: RGBA<f32>) -> Self {
-        RGB::<f32>::from(rgba).into()
+impl From<Rgba<f32>> for Hsv {
+    fn from(rgba: Rgba<f32>) -> Self {
+        Rgb::<f32>::from(rgba).into()
     }
 }
 
-impl From<HSL> for HSV {
-    fn from(hsl: HSL) -> Self {
+impl From<Hsl> for Hsv {
+    fn from(hsl: Hsl) -> Self {
         let v = hsl.l + hsl.s * hsl.l.min(1.0 - hsl.l);
         let s = if v == 0.0 {
             0.0
@@ -84,9 +84,9 @@ impl From<HSL> for HSV {
     }
 }
 
-impl From<CMYK> for HSV {
-    fn from(cmyk: CMYK) -> Self {
-        RGB::<f32>::from(cmyk).into()
+impl From<Cmyk> for Hsv {
+    fn from(cmyk: Cmyk) -> Self {
+        Rgb::<f32>::from(cmyk).into()
     }
 }
 
@@ -98,14 +98,14 @@ mod tests {
     fn test_hsv_to_rgb_conversion() {
         let epsilon = 0.001;
 
-        let hsv = HSV::new(210.0, 0.8, 1.0);
+        let hsv = Hsv::new(210.0, 0.8, 1.0);
 
-        let cf32: RGB<f32> = hsv.into();
+        let cf32: Rgb<f32> = hsv.into();
         assert!((cf32.r - 0.2).abs() < epsilon);
         assert!((cf32.g - 0.6).abs() < epsilon);
         assert!((cf32.b - 1.0).abs() < epsilon);
 
-        let cu8: RGB<u8> = hsv.into();
+        let cu8: Rgb<u8> = hsv.into();
         assert_eq!(cu8.r, 51);
         assert_eq!(cu8.g, 153);
         assert_eq!(cu8.b, 255);
@@ -115,15 +115,15 @@ mod tests {
     fn test_hsv_to_rgba_conversion() {
         let epsilon = 0.001;
 
-        let hsv = HSV::new(210.0, 0.8, 1.0);
+        let hsv = Hsv::new(210.0, 0.8, 1.0);
 
-        let cf32: RGBA<f32> = hsv.into();
+        let cf32: Rgba<f32> = hsv.into();
         assert!((cf32.r - 0.2).abs() < epsilon);
         assert!((cf32.g - 0.6).abs() < epsilon);
         assert!((cf32.b - 1.0).abs() < epsilon);
         assert_eq!(cf32.a, 1.0);
 
-        let cu8: RGBA<u8> = hsv.into();
+        let cu8: Rgba<u8> = hsv.into();
         assert_eq!(cu8.r, 51);
         assert_eq!(cu8.g, 153);
         assert_eq!(cu8.b, 255);
@@ -134,8 +134,8 @@ mod tests {
     fn test_hsv_to_hsl_conversion() {
         let epsilon = 0.001;
 
-        let hsv = HSV::new(45.0, 0.75, 0.8);
-        let hsl: HSL = hsv.into();
+        let hsv = Hsv::new(45.0, 0.75, 0.8);
+        let hsl: Hsl = hsv.into();
         assert!((hsl.h - 45.0).abs() < epsilon);
         assert!((hsl.s - 0.6).abs() < epsilon);
         assert!((hsl.l - 0.5).abs() < epsilon);
@@ -145,8 +145,8 @@ mod tests {
     fn test_hsv_to_cmyk_conversion() {
         let epsilon = 0.002;
 
-        let hsv_purple = HSV::new(270.0, 0.666, 0.6);
-        let cmyk: CMYK = hsv_purple.into();
+        let hsv_purple = Hsv::new(270.0, 0.666, 0.6);
+        let cmyk: Cmyk = hsv_purple.into();
         assert!((cmyk.c - 0.333).abs() < epsilon);
         assert!((cmyk.m - 0.667).abs() < epsilon);
         assert!((cmyk.y - 0.0).abs() < epsilon);
